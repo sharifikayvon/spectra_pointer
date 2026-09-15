@@ -94,6 +94,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 # ProxyFix's X-Forwarded-Prefix handling.
 _ABS_PATH_ATTR_RE = re.compile(rb'(href|src|action)=(["\'])/(?!/)')
 _ABS_PATH_FETCH_RE = re.compile(rb'fetch\((["\'])/(?!/)')
+# Several plot click-handlers navigate via plain JS assignment rather than
+# an href/fetch -- same hardcoded-absolute-path problem, different syntax.
+_ABS_PATH_LOCATION_RE = re.compile(rb'(window\.location(?:\.href)?\s*=\s*)(["\'])/(?!/)')
 
 
 @app.after_request
@@ -104,6 +107,7 @@ def _rewrite_links_for_subpath_mount(response):
     prefix_bytes = prefix.encode()
     body = response.get_data()
     body = _ABS_PATH_ATTR_RE.sub(lambda m: m.group(1) + b"=" + m.group(2) + prefix_bytes + b"/", body)
+    body = _ABS_PATH_LOCATION_RE.sub(lambda m: m.group(1) + m.group(2) + prefix_bytes + b"/", body)
     body = _ABS_PATH_FETCH_RE.sub(lambda m: b"fetch(" + m.group(1) + prefix_bytes + b"/", body)
     response.set_data(body)
     return response
@@ -4547,7 +4551,40 @@ _joy_ssh_lock = threading.Lock()
 _joy_ssh_client_cache: paramiko.SSHClient | None = None
 
 
+def _append_triage_submission_local(payload: dict, data_dir: str) -> None:
+    """When this process already has direct filesystem access to the data
+    directory (SPECTRA_DATA_DIR -- e.g. running on joy itself), append
+    straight to the file instead of paying for an SSH round trip to itself.
+    Lazy-imports joy_triage_append (not copied into the Cloud Run image,
+    see Dockerfile -- this path never runs there, only under SPECTRA_DATA_DIR)
+    to reuse its validation so both write paths enforce identically-shaped
+    submissions, and its own flock-guarded append so this is safe against
+    scripts.export_to_parquet or another worker reading/writing concurrently.
+    """
+    import fcntl
+
+    from scripts.joy_triage_append import validate
+
+    error = validate(payload)
+    if error:
+        raise RuntimeError(f"invalid submission: {error}")
+    target_path = os.path.join(data_dir, TRIAGE_SUBMISSIONS_FILENAME)
+    line = json.dumps(payload, separators=(",", ":")) + "\n"
+    with open(target_path, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            f.write(line)
+            f.flush()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
 def _append_triage_submission(payload: dict) -> None:
+    source = _resolve_data_source()
+    if not (source.startswith("http://") or source.startswith("https://")):
+        _append_triage_submission_local(payload, source)
+        return
+
     global _joy_ssh_client_cache
     data = json.dumps(payload, separators=(",", ":")) + "\n"
 
