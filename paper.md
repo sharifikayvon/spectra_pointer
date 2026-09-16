@@ -35,7 +35,7 @@ The Spectra Pointer solves this by running an independent sync process per archi
 
 # State of the Field
 
-CDS’ VizieR [@ochsenbein2000vizier] tool allows a user to search through associated data to look for spectra. However, their tool is based on internal table matching for published target lists. The Spectra Pointer, in contrast, directly searches each archive, matches the holding to a star internally, and aggregates the spectroscopic holdings. In short, The Spectra Pointer seeks out data that may not be well-documented or published.
+CDS’ VizieR [@ochsenbein2000vizier] tool allows a user to search through associated data to look for spectra. However, their tool is based on internal table matching for published target lists. The Spectra Pointer, in contrast, directly searches each archive, matches the holding to a star internally, and aggregates the spectroscopic holdings. In short, The Spectra Pointer seeks out data that may not be well-documented or published but is publicly available on astronomical observatory archives.
 
 # Software Design
 
@@ -50,19 +50,19 @@ Matching data to a particular star is a notoriously difficult problem in astrono
 The cross match process works as follows:
  - An online archive is scanned for spectroscopy holdings
  - Each holding is attempted to be resolved in the following order and added to the `spectroscopy_holdings` table
-   - A name match to the SIMBAD database which already has a mapped Gaia DR3 `source_id`
-   - A fast coordinate match out to 1 arcsecond radius (proper motions from Gaia DR3 are propagated). This is constrained enough to limit false-positives (although they do exist)
-   - A lower quality, 1 arcminute search with underlying match logic[^1]
-   - If all of the above fail, the holding is stored as “skipped”
+   1) A name match to the SIMBAD database which already has a mapped Gaia DR3 `source_id`
+   2) A fast sky coordinate match out to 1 arcsecond radius (proper motions from Gaia DR3 are propagated). This is constrained enough to limit false-positives (although they do exist)
+   3) A lower quality, 1 arcminute search with underlying match logic[^1]
+   4) If all of the above fail, the holding is stored as “skipped”
  - Once the holding is tied to a `source_id`, the table `stars` is checked to see if a star already exists. If not, the row is created. If it does exist, `star_id` is updated for the holding and the match method is tracked.
 
 This process is completed intermittently through the `sync` method and represented in Figure 1. Each archive has a "pluggable" module designed to query its particular database with its `fetch` method. Each has a running cursor that keeps track of what data has been accessed and checks for new public data whenever `sync` is called. This design allows a user to easily sync many databases in one command, but also makes it easy to implement new archives in the future.
 
-Prioritizing the archive’s named target allows the database to be based off of the Gaia archive[^2] while still balancing issues with coordinates that arise during observations. For example, some telescopes, especially older ones, only had pointing accuracy within an arcminute, and named targets are still able to be matched (the furthest named match to Gamma Cas is 19.4" away). After matching all spectroscopy holdings, the database is less than a few GB in size.
+Prioritizing the archive’s named target allows the database to be based off of the Gaia archive[^2] while still balancing issues with sky coordinate records that may arise during observations. For example some telescopes, especially older ones, only had pointing accuracy within an arcminute on the sky, but named targets can still be accurately matched - the furthest named match to the star Gamma Cas is 19.4" away based on (inaccurate) observatory records. After matching all spectroscopy holdings, the database is less than a few GB in size.
 
 [^1]: If a star is 2 magnitudes brighter than other stars within 1', it is considered the target. If there are multiple stars of similar magnitude, it is left as "needs_review".
 
-[^2]: About 3,000 stars are too bright for Gaia, in these cases the Bright Star Catalog (BSC) is used as a base. This catalog fully covers the missing stars.
+[^2]: About 3,000 stars are too bright for Gaia and not included in Gaia DR3, in these cases the Bright Star Catalog (BSC) designation is used as the identifier. The BSC catalog fully covers the missing bright stars.
 
 ## The Spectra Pointer Webapp
 
@@ -74,7 +74,7 @@ A search in The Spectra Pointer can be done in several ways. A query by the name
 
 This work provides stellar astronomers with a tool that is both broad and deep, tracking 16.8 million stars and 49.4 million spectra. An astronomer studying a particular star can now immediately determine whether archival spectra already exist for their source. This breadth of coverage is relevant for time-domain astronomy, where a source can be characterized without follow-up, as well as for inter-archival comparison and validation.
 
-The depth of the data is staggering. At the time of writing, Vega is the most observed star, with more than 35,000 spectra taken since 1978. AU Microscopii has the most wavelength coverage, with overlapping data taken from the x-ray all the way to the far infrared. The Spectra Pointer allows a user to, at a glance, see all the available spectra for a particular source and enrich the research on these sources.
+The depth of the data is staggering. At the time of writing, Vega is found to be the most observed star, with more than 35,000 spectra taken since 1978. AU Microscopii has the broadest wavelength coverage, with overlapping data taken from the x-ray all the way to the far infrared. The Spectra Pointer allows a user to, at a glance, see all the available spectra for a particular source and enrich the research on these sources.
 
 # AI usage disclosure
 
