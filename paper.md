@@ -19,7 +19,7 @@ authors:
   - name: Sébastien Lépine
     orcid: 0000-0002-2437-2947
     affiliation: 1
-  - name: Melodie Sloeneker
+  - name: Melodie Sloneker
     orcid: 0000-0002-1085-753X
     affiliation: 1
 affiliations:
