@@ -20,7 +20,7 @@ authors:
     orcid: 0000-0002-2437-2947
     affiliation: 1
   - name: Melodie Sloeneker
-    orcid:
+    orcid: 0000-0002-1085-753X
     affiliation: 1
 affiliations:
   - name: Department of Physics and Astronomy, Georgia State University, Atlanta, GA 30303, USA
