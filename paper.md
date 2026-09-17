@@ -13,6 +13,15 @@ authors:
   - name: Ilija Medan
     orcid: 0000-0003-3410-5794
     affiliation: 2
+  - name: Kayvon Sharifi
+    orcid: 0009-0006-3626-7585
+    affiliation: 1
+  - name: Sébastien Lépine
+    orcid: 0000-0002-2437-2947
+    affiliation: 1
+  - name: Melodie Sloeneker
+    orcid:
+    affiliation: 1
 affiliations:
   - name: Department of Physics and Astronomy, Georgia State University, Atlanta, GA 30303, USA
     index: 1
